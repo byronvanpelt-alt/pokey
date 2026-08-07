@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokémon TCG Set Tracker</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-icon">⚡</span>
+      <h1>Pokémon TCG Set Tracker</h1>
+    </div>
+    <div class="controls">
+      <select id="set-select" aria-label="Choose a set">
+        <option value="">Loading sets…</option>
+      </select>
+      <input id="search" type="search" placeholder="Search this set…" disabled />
+    </div>
+  </header>
+
+  <main id="app">
+    <section id="set-summary" class="set-summary hidden">
+      <img id="set-logo" class="set-logo" alt="" />
+      <div class="set-info">
+        <h2 id="set-name">—</h2>
+        <p id="set-meta" class="muted"></p>
+      </div>
+      <div class="progress-block">
+        <div class="progress-ring-wrap">
+          <svg viewBox="0 0 120 120" class="progress-ring">
+            <circle class="ring-bg" cx="60" cy="60" r="52"></circle>
+            <circle id="ring-fg" class="ring-fg" cx="60" cy="60" r="52"></circle>
+          </svg>
+          <div class="progress-pct"><span id="pct-value">0</span>%</div>
+        </div>
+        <div class="progress-counts">
+          <span id="count-value">0 / 0</span> collected
+        </div>
+        <div class="progress-actions">
+          <button id="mark-all" class="btn">Mark all owned</button>
+          <button id="clear-all" class="btn btn-ghost">Clear set</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="status" class="status"></section>
+
+    <section id="card-grid" class="card-grid" aria-live="polite"></section>
+  </main>
+
+  <footer class="footer">
+    <p>Card data from the <a href="https://pokemontcg.io" target="_blank" rel="noopener">Pokémon TCG API</a>. Your collection is saved locally in this browser only.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
