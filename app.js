@@ -34,6 +34,7 @@ async function init() {
   els.grid.addEventListener("click", onGridClick);
 
   try {
+    setStatus("Loading sets…");
     const sets = await fetchAllSets();
     populateSetSelect(sets);
     const lastSet = localStorage.getItem(LAST_SET_KEY);
@@ -41,17 +42,45 @@ async function init() {
     if (initial) {
       els.setSelect.value = initial;
       await loadSet(initial);
+    } else {
+      setStatus("");
     }
   } catch (err) {
-    setStatus(`Couldn't load sets: ${err.message}`, true);
+    setStatus(`Couldn't load sets: ${err.message}`, true, () => init());
   }
 }
 
+async function fetchJson(url, { retries = 2, backoffMs = 600 } = {}) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        if (res.status >= 500 && attempt < retries) {
+          lastErr = new Error(`API returned ${res.status}`);
+          await sleep(backoffMs * (attempt + 1));
+          continue;
+        }
+        throw new Error(`API returned ${res.status}`);
+      }
+      return await res.json();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < retries) {
+        await sleep(backoffMs * (attempt + 1));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function fetchAllSets() {
-  const res = await fetch(`${API_BASE}/sets?orderBy=-releaseDate`);
-  if (!res.ok) throw new Error(`API returned ${res.status}`);
-  const data = await res.json();
-  return data.data;
+  const data = await fetchJson(`${API_BASE}/sets`);
+  return data.data.sort((a, b) => (a.releaseDate < b.releaseDate ? 1 : -1));
 }
 
 function populateSetSelect(sets) {
@@ -103,14 +132,12 @@ async function loadSet(setId) {
     updateProgress();
     setStatus("");
   } catch (err) {
-    setStatus(`Couldn't load this set: ${err.message}`, true);
+    setStatus(`Couldn't load this set: ${err.message}`, true, () => loadSet(setId));
   }
 }
 
 async function fetchSet(setId) {
-  const res = await fetch(`${API_BASE}/sets/${setId}`);
-  if (!res.ok) throw new Error(`API returned ${res.status}`);
-  const data = await res.json();
+  const data = await fetchJson(`${API_BASE}/sets/${setId}`);
   return data.data;
 }
 
@@ -119,11 +146,7 @@ async function fetchSetCards(setId) {
   let page = 1;
   let all = [];
   while (true) {
-    const res = await fetch(
-      `${API_BASE}/cards?q=set.id:${setId}&pageSize=${pageSize}&page=${page}&orderBy=number`
-    );
-    if (!res.ok) throw new Error(`API returned ${res.status}`);
-    const data = await res.json();
+    const data = await fetchJson(`${API_BASE}/cards?q=set.id:${setId}&pageSize=${pageSize}&page=${page}`);
     all = all.concat(data.data);
     if (all.length >= data.totalCount || data.data.length === 0) break;
     page += 1;
@@ -245,7 +268,19 @@ function updateProgress() {
   els.ringFg.style.strokeDashoffset = String(offset);
 }
 
-function setStatus(message, isError = false) {
-  els.status.textContent = message;
+function setStatus(message, isError = false, onRetry = null) {
+  els.status.innerHTML = "";
   els.status.style.color = isError ? "var(--accent)" : "";
+  if (!message) return;
+
+  els.status.append(document.createTextNode(message));
+  if (isError && onRetry) {
+    const retryBtn = document.createElement("button");
+    retryBtn.type = "button";
+    retryBtn.className = "btn btn-ghost";
+    retryBtn.textContent = "Retry";
+    retryBtn.style.marginLeft = "10px";
+    retryBtn.addEventListener("click", onRetry);
+    els.status.append(retryBtn);
+  }
 }
